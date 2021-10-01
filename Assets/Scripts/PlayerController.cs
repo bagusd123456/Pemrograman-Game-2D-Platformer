@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class PlayerController : MonoBehaviour
 {
@@ -9,10 +10,17 @@ public class PlayerController : MonoBehaviour
 
     int idMove = 0;
     Animator anim;
+
+    public GameObject Projectile;
+    public Vector2 projectileVelocity;
+    public Vector2 projectileOffset;
+    public float cooldown = 0.5f;
+    bool isCanShoot = true;
     // Start is called before the first frame update
     void Start()
     {
         anim = GetComponent<Animator>();
+        isCanShoot = true;
     }
 
     // Update is called once per frame
@@ -38,11 +46,57 @@ public class PlayerController : MonoBehaviour
         {
             Idle();
         }
+        if (Input.GetKeyDown(KeyCode.Z))
+        {
+            Fire();
+        }
         Move();
         Dead();
     }
 
-    private void OnCollisionStay2D(Collision2D collision)
+    void Fire()
+    {
+        // jika karakter dapat menembak
+        if (isCanShoot)
+        {
+            //Membuat projectile baru
+            GameObject bullet = Instantiate(Projectile, (Vector2)transform.position - projectileOffset * transform.localScale.x, Quaternion.identity);
+
+            // mengatur kecepatan dari projectile
+            Vector2 velocity = new Vector2(projectileVelocity.x * transform.localScale.x, projectileVelocity.y);
+            bullet.GetComponent<Rigidbody2D>().velocity = velocity * -1;
+
+            //Menyesuaikan scale dari projectile dengan scale karakter
+            Vector3 scale = transform.localScale;
+            bullet.transform.localScale = scale * - 1;
+
+            StartCoroutine(CanShoot());
+            anim.SetTrigger("isShoot");
+        }
+    }
+
+    IEnumerator CanShoot()
+    {
+        anim.SetTrigger("isShoot");
+        isCanShoot = false;
+        yield return new WaitForSeconds(cooldown);
+        isCanShoot = true;
+    }
+
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (collision.transform.tag.Equals("Peluru"))
+        {
+            isCanShoot = true;
+        }
+        if (collision.transform.tag.Equals("Enemy"))
+        {
+            SceneManager.LoadScene("Game Over");
+            isDead = true;
+        }
+    }
+
+private void OnCollisionStay2D(Collision2D collision)
     {
         if (isJump)
         {
@@ -99,7 +153,7 @@ public class PlayerController : MonoBehaviour
     {
         if (collision.transform.tag.Equals("Coin"))
         {
-            //Data.score += 15;
+            Data.score += 15;
             Destroy(collision.gameObject);
         }
     }
